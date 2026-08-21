@@ -9,13 +9,11 @@
 </head>
 <body>
 
-<!-- ============ APP ============ -->
 <div id="mainApp">
 
     <!-- ===== HOME ===== -->
     <div id="homePage" class="page active">
         <div class="container">
-            <!-- Header -->
             <div class="header">
                 <div>
                     <h1 class="greeting">👋 Welcome back!</h1>
@@ -27,7 +25,6 @@
                 </div>
             </div>
 
-            <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon">📁</div>
@@ -46,7 +43,6 @@
                 </div>
             </div>
 
-            <!-- Quick Actions -->
             <div class="section-title">⚡ Quick Actions</div>
             <div class="quick-grid">
                 <div class="quick-card" onclick="openModal('addSection')">
@@ -67,7 +63,6 @@
                 </div>
             </div>
 
-            <!-- Sections -->
             <div class="section-title">📂 Your Sections</div>
             <div id="homeSections"></div>
         </div>
@@ -112,14 +107,15 @@
     <div id="aiSetPage" class="page">
         <div class="container">
             <h2 class="page-title">🤖 AI Set Maker</h2>
-            <p class="page-subtitle">Create bangle sets from available colors</p>
+            <p class="page-subtitle">Create bangle sets from available designs & colors</p>
 
+            <!-- Available Designs -->
             <div class="card">
-                <h3 class="card-title">🎨 Available Colors</h3>
-                <div id="availableColors" class="color-palette"></div>
+                <h3 class="card-title">🎨 Available Designs in Inventory</h3>
+                <div id="availableDesigns" class="design-grid"></div>
             </div>
 
-            <button onclick="generateAISets()" class="btn-gradient">⚡ Generate AI Sets</button>
+            <button onclick="generateAISets()" class="btn-gradient">⚡ Generate AI Sets from Designs</button>
 
             <div id="generatedSets"></div>
         </div>
@@ -198,7 +194,7 @@
             <div class="card" style="text-align:center;padding:30px">
                 <div style="font-size:48px;margin-bottom:10px">📱</div>
                 <h3 style="margin-bottom:5px;color:#fff">Smart Inventory v2.0</h3>
-                <p style="color:#6b7280;font-size:13px">100% Real • No Login Required</p>
+                <p style="color:#6b7280;font-size:13px">With Design Images Support</p>
             </div>
         </div>
     </div>
