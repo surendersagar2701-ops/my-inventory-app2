@@ -1,1 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Inventory</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
 
+<!-- ============ APP ============ -->
+<div id="mainApp">
+
+    <!-- ===== HOME ===== -->
+    <div id="homePage" class="page active">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <div>
+                    <h1 class="greeting">👋 Welcome back!</h1>
+                    <p class="sub-greeting">Smart Inventory Manager</p>
+                </div>
+                <div class="header-actions">
+                    <button onclick="exportData()" class="icon-btn">📤</button>
+                    <button onclick="clearAllData()" class="icon-btn danger">🗑️</button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📁</div>
+                    <div class="stat-number" id="totalSections">0</div>
+                    <div class="stat-label">Sections</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-number" id="totalProducts">0</div>
+                    <div class="stat-label">Products</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-number" id="totalStock">0</div>
+                    <div class="stat-label">Total Stock</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="section-title">⚡ Quick Actions</div>
+            <div class="quick-grid">
+                <div class="quick-card" onclick="openModal('addSection')">
+                    <div class="quick-icon purple">📁</div>
+                    <div class="quick-label">New Section</div>
+                </div>
+                <div class="quick-card" onclick="openModal('addProduct')">
+                    <div class="quick-icon blue">➕</div>
+                    <div class="quick-label">Add Product</div>
+                </div>
+                <div class="quick-card" onclick="openModal('bulkAdd')">
+                    <div class="quick-icon green">📥</div>
+                    <div class="quick-label">Bulk Add</div>
+                </div>
+                <div class="quick-card" onclick="openModal('aiSet')">
+                    <div class="quick-icon gold">🤖</div>
+                    <div class="quick-label">AI Set Maker</div>
+                </div>
+            </div>
+
+            <!-- Sections -->
+            <div class="section-title">📂 Your Sections</div>
+            <div id="homeSections"></div>
+        </div>
+    </div>
+
+    <!-- ===== INVENTORY ===== -->
+    <div id="inventoryPage" class="page">
+        <div class="container">
+            <div class="page-header">
+                <h2 class="page-title">📦 Inventory</h2>
+                <div class="header-buttons">
+                    <button onclick="openModal('addSection')" class="btn-secondary">📁</button>
+                    <button onclick="openModal('addProduct')" class="btn-primary">+ Add</button>
+                </div>
+            </div>
+
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input id="searchInput" placeholder="Search products..." class="search-input">
+            </div>
+
+            <div class="filter-row">
+                <select id="filterSection" class="filter-select">
+                    <option value="">All Sections</option>
+                </select>
+                <select id="filterColor" class="filter-select">
+                    <option value="">All Colors</option>
+                    <option value="Red">🔴 Red</option>
+                    <option value="Blue">🔵 Blue</option>
+                    <option value="Gold">🟡 Gold</option>
+                    <option value="Green">🟢 Green</option>
+                    <option value="Silver">⚪ Silver</option>
+                    <option value="Pink">🩷 Pink</option>
+                </select>
+            </div>
+
+            <div id="inventorySections"></div>
+        </div>
+    </div>
+
+    <!-- ===== AI SET MAKER ===== -->
+    <div id="aiSetPage" class="page">
+        <div class="container">
+            <h2 class="page-title">🤖 AI Set Maker</h2>
+            <p class="page-subtitle">Create bangle sets from available colors</p>
+
+            <div class="card">
+                <h3 class="card-title">🎨 Available Colors</h3>
+                <div id="availableColors" class="color-palette"></div>
+            </div>
+
+            <button onclick="generateAISets()" class="btn-gradient">⚡ Generate AI Sets</button>
+
+            <div id="generatedSets"></div>
+        </div>
+    </div>
+
+    <!-- ===== BILL ===== -->
+    <div id="billPage" class="page">
+        <div class="container">
+            <h2 class="page-title">🧾 Parcha / Bill</h2>
+
+            <div class="card">
+                <div class="form-group">
+                    <label>👤 Customer Name</label>
+                    <input id="customerName" placeholder="Customer name" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>📱 Mobile</label>
+                    <input id="customerMobile" placeholder="Mobile number" class="form-input">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="search-add">
+                    <input id="billSearch" placeholder="🔍 Search SKU" class="form-input" style="flex:1">
+                    <button onclick="scanBillProduct()" class="btn-scan">📷</button>
+                </div>
+                <div id="billItems" style="margin-top:15px"></div>
+
+                <div class="bill-total">
+                    <div class="bill-row">
+                        <span>Subtotal</span>
+                        <span id="billSubtotal">₹0</span>
+                    </div>
+                    <div class="bill-row">
+                        <span>Discount (₹)</span>
+                        <input id="billDiscount" type="number" value="0" class="discount-input" oninput="calculateBillTotal()">
+                    </div>
+                    <div class="bill-grand">
+                        <span>Total</span>
+                        <span id="billTotal">₹0</span>
+                    </div>
+                </div>
+
+                <button onclick="saveBill()" class="btn-success">💾 Save Bill</button>
+            </div>
+
+            <div class="section-title">📜 Bill History</div>
+            <div id="billHistory"></div>
+        </div>
+    </div>
+
+    <!-- ===== MORE ===== -->
+    <div id="morePage" class="page">
+        <div class="container">
+            <h2 class="page-title">⚙️ Settings</h2>
+
+            <div class="card">
+                <div class="menu-item" onclick="exportData()">
+                    <span>📤 Export Data</span>
+                    <span style="color:#6b7280">→</span>
+                </div>
+                <div class="menu-item" onclick="importData()">
+                    <span>📥 Import Data</span>
+                    <span style="color:#6b7280">→</span>
+                </div>
+                <div class="menu-item" onclick="clearAllData()">
+                    <span style="color:#ef4444">🗑️ Clear All Data</span>
+                    <span style="color:#6b7280">→</span>
+                </div>
+                <div class="menu-item" onclick="aboutApp()">
+                    <span>ℹ️ About</span>
+                    <span style="color:#6b7280">→</span>
+                </div>
+            </div>
+
+            <div class="card" style="text-align:center;padding:30px">
+                <div style="font-size:48px;margin-bottom:10px">📱</div>
+                <h3 style="margin-bottom:5px;color:#fff">Smart Inventory v2.0</h3>
+                <p style="color:#6b7280;font-size:13px">100% Real • No Login Required</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== BOTTOM NAV ===== -->
+<div class="bottom-nav">
+    <div class="nav-item active" onclick="switchPage('home')">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+    </div>
+    <div class="nav-item" onclick="switchPage('inventory')">
+        <span class="nav-icon">📦</span>
+        <span class="nav-label">Inventory</span>
+    </div>
+    <div class="nav-item" onclick="switchPage('aiSet')">
+        <span class="nav-icon">🤖</span>
+        <span class="nav-label">AI Set</span>
+    </div>
+    <div class="nav-item" onclick="switchPage('bill')">
+        <span class="nav-icon">🧾</span>
+        <span class="nav-label">Parcha</span>
+    </div>
+    <div class="nav-item" onclick="switchPage('more')">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">More</span>
+    </div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div id="modal" class="modal">
+    <div class="modal-content" id="modalContent"></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
