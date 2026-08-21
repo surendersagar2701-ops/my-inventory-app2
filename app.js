@@ -1,11 +1,12 @@
 /* ========================================
-   SMART INVENTORY APP v2.0
+   SMART INVENTORY APP v2.0 - With Design Images
    ======================================== */
 
 let products = JSON.parse(localStorage.getItem('products')) || [];
 let sections = JSON.parse(localStorage.getItem('sections')) || [];
 let bills = JSON.parse(localStorage.getItem('bills')) || [];
 let currentBill = [];
+let selectedImage = null;
 
 // ==========================================
 // 1. NAVIGATION
@@ -18,7 +19,7 @@ function switchPage(page) {
     document.querySelector(`.nav-item[onclick="switchPage('${page}')"]`).classList.add('active');
     
     if (page === 'inventory') renderInventory();
-    if (page === 'aiSet') updateColorPalette();
+    if (page === 'aiSet') { updateAvailableDesigns(); updateColorPalette(); }
     if (page === 'home') updateUI();
     if (page === 'bill') renderBillHistory();
 }
@@ -50,7 +51,7 @@ function openModal(type) {
             const sectionOptions = sections.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
             html = `
                 <button class="modal-close" onclick="closeModal()">✕</button>
-                <h3 class="modal-title">➕ Add New Product</h3>
+                <h3 class="modal-title">➕ Add New Product with Design</h3>
                 <div class="form-group">
                     <label>Section</label>
                     <select id="productSection" class="form-input">
@@ -82,6 +83,15 @@ function openModal(type) {
                 <div class="form-group">
                     <label>Size</label>
                     <input id="productSize" placeholder="e.g., M, L, 18" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Design Image</label>
+                    <div class="image-upload-area" onclick="document.getElementById('designImageInput').click()">
+                        <span class="upload-icon">🖼️</span>
+                        <span class="upload-text">Tap to upload design image</span>
+                    </div>
+                    <input type="file" id="designImageInput" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+                    <div id="imagePreviewContainer" class="image-preview"></div>
                 </div>
                 <div class="form-group">
                     <label>Selling Price (₹)</label>
@@ -119,9 +129,9 @@ function openModal(type) {
             html = `
                 <button class="modal-close" onclick="closeModal()">✕</button>
                 <h3 class="modal-title">🤖 AI Set Maker</h3>
-                <p style="color:#6b7280;font-size:13px;margin-bottom:12px">Create bangle sets from available colors</p>
-                <div id="modalColorPalette" class="color-palette"></div>
-                <button onclick="generateAISetsModal()" class="btn-gradient" style="margin-top:12px">⚡ Generate Sets</button>
+                <p style="color:#6b7280;font-size:13px;margin-bottom:12px">AI will analyze available designs & colors to create sets</p>
+                <div id="modalDesigns" class="design-grid" style="margin-bottom:12px"></div>
+                <button onclick="generateAISetsModal()" class="btn-gradient">⚡ Generate Sets from Designs</button>
                 <div id="modalGeneratedSets" style="margin-top:12px"></div>
             `;
             break;
@@ -133,11 +143,38 @@ function openModal(type) {
     content.innerHTML = html;
     modal.classList.add('show');
     
-    if (type === 'aiSet') renderModalColorPalette();
+    if (type === 'aiSet') renderModalDesigns();
+    selectedImage = null;
 }
 
 function closeModal() {
     document.getElementById('modal').classList.remove('show');
+    selectedImage = null;
+}
+
+// ===== IMAGE UPLOAD HANDLER =====
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        selectedImage = e.target.result;
+        const container = document.getElementById('imagePreviewContainer');
+        container.innerHTML = `
+            <div class="image-preview-item">
+                <img src="${e.target.result}" alt="Design">
+                <button class="remove-img" onclick="removeImage()">✕</button>
+            </div>
+        `;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeImage() {
+    selectedImage = null;
+    document.getElementById('imagePreviewContainer').innerHTML = '';
+    document.getElementById('designImageInput').value = '';
 }
 
 // ==========================================
@@ -164,7 +201,7 @@ function deleteSection(id) {
 }
 
 // ==========================================
-// 4. PRODUCTS
+// 4. PRODUCTS WITH IMAGE
 // ==========================================
 
 function addProduct() {
@@ -181,15 +218,32 @@ function addProduct() {
     if (!sku) { alert('Enter SKU'); return; }
     if (products.some(p => p.sku === sku)) { alert('SKU exists!'); return; }
     
-    products.push({
+    const product = {
         id: 'PROD-' + Date.now(),
         sectionId, name, sku, color, size,
-        price, stock, purchase: 0
-    });
+        price, stock, purchase: 0,
+        designImage: selectedImage || null,
+        designEmoji: getDesignEmoji(name)
+    };
     
+    products.push(product);
     localStorage.setItem('products', JSON.stringify(products));
+    selectedImage = null;
     closeModal();
     updateUI();
+}
+
+function getDesignEmoji(name) {
+    const map = {
+        'Gold': '🟡',
+        'Red': '🔴',
+        'Blue': '🔵',
+        'Green': '🟢',
+        'Silver': '⚪',
+        'Pink': '🩷',
+        'Purple': '🟣'
+    };
+    return map[name] || '💎';
 }
 
 function editProduct(id) {
@@ -218,6 +272,7 @@ function editProduct(id) {
         <div class="form-group"><label>Size</label><input id="editSize" value="${p.size||''}" class="form-input"></div>
         <div class="form-group"><label>Price</label><input id="editPrice" type="number" value="${p.price}" class="form-input"></div>
         <div class="form-group"><label>Stock</label><input id="editStock" type="number" value="${p.stock}" class="form-input"></div>
+        ${p.designImage ? `<div style="margin:10px 0"><img src="${p.designImage}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;border:2px solid rgba(255,255,255,0.06)"></div>` : ''}
         <button onclick="saveEdit('${id}')" class="btn-gradient">💾 Save</button>
         <button onclick="deleteProduct('${id}')" style="width:100%;padding:14px;margin-top:10px;background:#ef4444;color:#fff;border:none;border-radius:12px;font-weight:600;cursor:pointer">🗑️ Delete</button>
     `;
@@ -266,7 +321,9 @@ function bulkAdd() {
         products.push({
             id: 'PROD-' + Date.now() + '-' + Math.random().toString(36).substr(2,3),
             sectionId, name, sku, color: color||'', size: size||'',
-            price: parseFloat(price)||0, stock: parseInt(stock)||0, purchase: 0
+            price: parseFloat(price)||0, stock: parseInt(stock)||0, purchase: 0,
+            designImage: null,
+            designEmoji: getDesignEmoji(color)
         });
         added++;
     });
@@ -278,86 +335,195 @@ function bulkAdd() {
 }
 
 // ==========================================
-// 6. AI SET MAKER
+// 6. AI SET MAKER WITH DESIGNS
 // ==========================================
 
-function renderModalColorPalette() {
-    const c = document.getElementById('modalColorPalette');
-    if (!c) return;
-    const colors = {};
-    products.forEach(p => { if (p.color && p.stock > 0) colors[p.color] = (colors[p.color]||0) + p.stock; });
-    if (Object.keys(colors).length === 0) { c.innerHTML = '<p style="color:#6b7280">No colors</p>'; return; }
-    c.innerHTML = Object.entries(colors).map(([col, qty]) => `
-        <div class="color-item">
-            <div class="color-chip" style="background:${getColorHex(col)}"></div>
-            <div class="color-label">${col}<br>${qty}</div>
+function updateAvailableDesigns() {
+    const container = document.getElementById('availableDesigns');
+    if (!container) return;
+    
+    const designs = products.filter(p => p.stock > 0);
+    if (designs.length === 0) {
+        container.innerHTML = '<p style="color:#6b7280;text-align:center;padding:20px">No products in inventory. Add some designs first!</p>';
+        return;
+    }
+    
+    container.innerHTML = designs.map(p => `
+        <div class="design-card">
+            <div class="design-image">
+                ${p.designImage ? `<img src="${p.designImage}" alt="${p.name}">` : `<span class="design-emoji">${p.designEmoji || '💎'}</span>`}
+            </div>
+            <div class="design-name">${p.name}</div>
+            <div class="design-color">${p.color || 'No color'} • ${p.size || ''}</div>
+            <div class="design-stock">${p.stock} in stock</div>
         </div>
     `).join('');
 }
 
-function generateAISetsModal() {
-    const c = document.getElementById('modalGeneratedSets');
-    if (!c) return;
-    const colors = {};
-    products.forEach(p => { if (p.color && p.stock > 0) colors[p.color] = (colors[p.color]||0) + p.stock; });
-    const names = Object.keys(colors);
-    if (names.length < 2) { c.innerHTML = '<p style="color:#ef4444">Need 2+ colors</p>'; return; }
+function renderModalDesigns() {
+    const container = document.getElementById('modalDesigns');
+    if (!container) return;
     
-    const sets = [];
-    for (let i = 0; i < names.length; i++) {
-        for (let j = i+1; j < names.length; j++) {
-            const min = Math.min(colors[names[i]], colors[names[j]]);
-            if (min >= 2) sets.push({ colors: [names[i], names[j]], maxSets: Math.floor(min/2), name: names[i] + '+' + names[j] });
-        }
+    const designs = products.filter(p => p.stock > 0);
+    if (designs.length === 0) {
+        container.innerHTML = '<p style="color:#6b7280;text-align:center;padding:20px">No products. Add designs first!</p>';
+        return;
     }
-    for (let i = 0; i < names.length; i++) {
-        for (let j = i+1; j < names.length; j++) {
-            for (let k = j+1; k < names.length; k++) {
-                const min = Math.min(colors[names[i]], colors[names[j]], colors[names[k]]);
-                if (min >= 2) sets.push({ colors: [names[i], names[j], names[k]], maxSets: Math.floor(min/2), name: names[i] + '+' + names[j] + '+' + names[k] });
+    
+    container.innerHTML = designs.slice(0,6).map(p => `
+        <div class="design-card" style="padding:8px">
+            <div class="design-image" style="width:60px;height:60px;font-size:24px">
+                ${p.designImage ? `<img src="${p.designImage}" alt="${p.name}">` : `<span class="design-emoji">${p.designEmoji || '💎'}</span>`}
+            </div>
+            <div class="design-name" style="font-size:10px">${p.name}</div>
+        </div>
+    `).join('');
+}
+
+function generateAISets() {
+    updateAvailableDesigns();
+    generateAISetsFromDesigns();
+}
+
+function generateAISetsModal() {
+    const container = document.getElementById('modalGeneratedSets');
+    if (!container) return;
+    generateAISetsFromDesigns(container);
+}
+
+function generateAISetsFromDesigns(container) {
+    const targetContainer = container || document.getElementById('generatedSets');
+    if (!targetContainer) return;
+    
+    // Get all products with stock
+    const availableProducts = products.filter(p => p.stock > 0);
+    
+    if (availableProducts.length < 2) {
+        targetContainer.innerHTML = '<p style="color:#ef4444;text-align:center;padding:20px">Need at least 2 designs with stock to create sets!</p>';
+        return;
+    }
+    
+    // Group by color for set combinations
+    const colorGroups = {};
+    availableProducts.forEach(p => {
+        if (p.color) {
+            if (!colorGroups[p.color]) colorGroups[p.color] = [];
+            colorGroups[p.color].push(p);
+        }
+    });
+    
+    const colors = Object.keys(colorGroups);
+    if (colors.length < 2) {
+        targetContainer.innerHTML = '<p style="color:#ef4444;text-align:center;padding:20px">Need at least 2 different colors!</p>';
+        return;
+    }
+    
+    // Generate sets
+    const sets = [];
+    for (let i = 0; i < colors.length; i++) {
+        for (let j = i+1; j < colors.length; j++) {
+            const products1 = colorGroups[colors[i]];
+            const products2 = colorGroups[colors[j]];
+            const minStock = Math.min(
+                products1.reduce((s,p) => s + p.stock, 0),
+                products2.reduce((s,p) => s + p.stock, 0)
+            );
+            if (minStock >= 2) {
+                sets.push({
+                    colors: [colors[i], colors[j]],
+                    products: [...products1, ...products2],
+                    maxSets: Math.floor(minStock / 2),
+                    name: `${colors[i]} + ${colors[j]} Set`,
+                    designEmojis: [products1[0]?.designEmoji || '💎', products2[0]?.designEmoji || '💎'],
+                    designImages: [products1[0]?.designImage, products2[0]?.designImage]
+                });
             }
         }
     }
     
-    if (sets.length === 0) { c.innerHTML = '<p style="color:#ef4444">Not enough stock</p>'; return; }
-    c.innerHTML = sets.slice(0,12).map((set, idx) => `
-        <div class="set-card">
+    // 3-color combos
+    for (let i = 0; i < colors.length; i++) {
+        for (let j = i+1; j < colors.length; j++) {
+            for (let k = j+1; k < colors.length; k++) {
+                const products1 = colorGroups[colors[i]];
+                const products2 = colorGroups[colors[j]];
+                const products3 = colorGroups[colors[k]];
+                const minStock = Math.min(
+                    products1.reduce((s,p) => s + p.stock, 0),
+                    products2.reduce((s,p) => s + p.stock, 0),
+                    products3.reduce((s,p) => s + p.stock, 0)
+                );
+                if (minStock >= 2) {
+                    sets.push({
+                        colors: [colors[i], colors[j], colors[k]],
+                        products: [...products1, ...products2, ...products3],
+                        maxSets: Math.floor(minStock / 2),
+                        name: `${colors[i]} + ${colors[j]} + ${colors[k]} Set`,
+                        designEmojis: [products1[0]?.designEmoji || '💎', products2[0]?.designEmoji || '💎', products3[0]?.designEmoji || '💎'],
+                        designImages: [products1[0]?.designImage, products2[0]?.designImage, products3[0]?.designImage]
+                    });
+                }
+            }
+        }
+    }
+    
+    if (sets.length === 0) {
+        targetContainer.innerHTML = '<p style="color:#ef4444;text-align:center;padding:20px">Not enough stock to create sets!</p>';
+        return;
+    }
+    
+    targetContainer.innerHTML = sets.slice(0,12).map((set, idx) => `
+        <div class="set-card-design">
             <div class="set-header">
                 <span class="set-name">${set.name}</span>
                 <span class="set-badge">${set.maxSets} sets</span>
             </div>
-            <div class="set-colors">${set.colors.map(cl => `<div class="set-color-dot" style="background:${getColorHex(cl)}"></div>`).join('')}</div>
-            <button onclick="addSetToInv(${idx})" class="btn-add-set">➕ Add</button>
+            <div class="set-design-preview">
+                ${set.designImages.map((img, i) => `
+                    <div class="design-thumb">
+                        ${img ? `<img src="${img}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">` : set.designEmojis[i] || '💎'}
+                    </div>
+                `).join('')}
+            </div>
+            <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Colors: ${set.colors.join(', ')}</div>
+            <button onclick="addSetToInventory(${idx})" class="btn-add-set">➕ Add to Inventory</button>
         </div>
     `).join('');
-    window._sets = sets;
+    
+    window._generatedSets = sets;
 }
 
-function addSetToInv(idx) {
-    const set = window._sets[idx];
+function addSetToInventory(idx) {
+    const set = window._generatedSets[idx];
     if (!set) return;
+    
     let sec = sections.find(s => s.name === 'AI Sets');
-    if (!sec) { sec = { id: 'SEC-AI-' + Date.now(), name: 'AI Sets' }; sections.push(sec); localStorage.setItem('sections', JSON.stringify(sections)); }
-    products.push({
+    if (!sec) { 
+        sec = { id: 'SEC-AI-' + Date.now(), name: 'AI Sets' }; 
+        sections.push(sec); 
+        localStorage.setItem('sections', JSON.stringify(sections)); 
+    }
+    
+    const product = {
         id: 'SET-' + Date.now(),
         sectionId: sec.id,
-        name: 'Set: ' + set.name,
+        name: set.name,
         sku: 'SET-' + Date.now().toString().slice(-6),
-        color: set.colors.join('+'),
+        color: set.colors.join(' + '),
         size: 'Set',
         price: 499 + (set.colors.length * 100),
         stock: set.maxSets,
         purchase: 0,
-        isSet: true
-    });
+        isSet: true,
+        designImage: set.designImages[0] || null,
+        designEmoji: set.designEmojis[0] || '💎'
+    };
+    
+    products.push(product);
     localStorage.setItem('products', JSON.stringify(products));
     closeModal();
     updateUI();
-}
-
-function generateAISets() {
-    updateColorPalette();
-    switchPage('aiSet');
+    alert('✅ Added "' + set.name + '" (' + set.maxSets + ' sets)');
 }
 
 function getColorHex(color) {
@@ -402,7 +568,12 @@ function renderInventory() {
         if (sp.length === 0) return;
         html += `<div class="section-card"><div class="section-header"><span class="section-name">📁 ${section.name}</span><span class="section-count">${sp.length}</span><button onclick="deleteSection('${section.id}')" style="background:rgba(239,68,68,0.15);color:#f87171;border:none;border-radius:8px;padding:4px 10px;cursor:pointer">✕</button></div><div class="section-products">${sp.map(p => `
             <div class="product-item">
-                <div class="product-info"><div class="product-name">${p.name}</div><div class="product-sku">SKU: ${p.sku} ${p.color ? '• '+p.color : ''} ${p.size ? '• '+p.size : ''}</div></div>
+                <div class="product-info" style="display:flex;align-items:center;gap:10px">
+                    <div style="width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden">
+                        ${p.designImage ? `<img src="${p.designImage}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">` : (p.designEmoji || '💎')}
+                    </div>
+                    <div><div class="product-name">${p.name}</div><div class="product-sku">SKU: ${p.sku} ${p.color ? '• '+p.color : ''} ${p.size ? '• '+p.size : ''}</div></div>
+                </div>
                 <div class="product-right"><div class="product-price">₹${p.price||0}</div><span class="product-stock-badge ${(p.stock||0)<5?'badge-low':'badge-good'}">${p.stock||0}</span><button onclick="editProduct('${p.id}')" class="product-edit-btn">✏️</button></div>
             </div>
         `).join('')}</div></div>`;
@@ -431,7 +602,12 @@ function renderBillItems() {
     if (currentBill.length === 0) { c.innerHTML = '<p style="color:#6b7280;text-align:center;padding:12px">No items</p>'; return; }
     c.innerHTML = currentBill.map((item, idx) => `
         <div class="product-item">
-            <div class="product-info"><div class="product-name">${item.name}</div><div class="product-sku">₹${item.price} × ${item.qty}</div></div>
+            <div class="product-info" style="display:flex;align-items:center;gap:10px">
+                <div style="width:30px;height:30px;border-radius:4px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-size:14px;overflow:hidden">
+                    ${item.designImage ? `<img src="${item.designImage}" style="width:100%;height:100%;object-fit:cover;border-radius:4px">` : (item.designEmoji || '💎')}
+                </div>
+                <div><div class="product-name">${item.name}</div><div class="product-sku">₹${item.price} × ${item.qty}</div></div>
+            </div>
             <div style="display:flex;align-items:center;gap:10px"><span style="font-weight:700">₹${item.subtotal}</span><button onclick="removeBillItem(${idx})" style="background:none;border:none;font-size:20px;color:#ef4444;cursor:pointer">✕</button></div>
         </div>
     `).join('');
@@ -507,6 +683,7 @@ function updateUI() {
     renderHomeSections();
     renderInventory();
     renderBillHistory();
+    updateAvailableDesigns();
     updateColorPalette();
 }
 
@@ -585,7 +762,7 @@ function clearAllData() {
 }
 
 function aboutApp() {
-    alert('📱 Smart Inventory v2.0\n━━━━━━━━━━━━━━━━\n✅ Sections + Products\n✅ AI Set Maker\n✅ Billing System\n✅ 100% Real\n🚀 No Login Required');
+    alert('📱 Smart Inventory v2.0\n━━━━━━━━━━━━━━━━\n✅ Sections + Products\n✅ Design Images Upload\n✅ AI Set Maker with Designs\n✅ Billing System\n✅ 100% Real');
 }
 
 // ==========================================
@@ -599,4 +776,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 updateUI();
-console.log('✅ Smart Inventory Loaded!');
+console.log('✅ Smart Inventory v2.0 - With Design Images Loaded!');
